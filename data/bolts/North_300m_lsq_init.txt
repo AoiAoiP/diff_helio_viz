@@ -1,0 +1,42 @@
+# North 300m bolt heights - ellipse TPS least-squares fit (initial guess)
+# source : bezier_opt/data/init_lsq/North_300m_bolt_init.txt  (produced by scripts/lsq_fit_elliptic.py)
+# units  : metres, upstream "pipeline" convention (index/value pairs unwrapped to one value per line)
+# note   : a uniform offset across all bolts is a rigid translation only (sum(phi_b) == 1),
+#          so this file and the optimised stroke file are optically comparable.
+# count  : 35
+# max    : 0.0334 m
+0.03339608
+0.02072955
+0.01480833
+0.01206626
+0.01480392
+0.02072119
+0.03338262
+0.02295817
+0.01152014
+0.00524813
+0.00273196
+0.00524599
+0.01151598
+0.02295182
+0.02072664
+0.00890154
+0.00250818
+0.00003718
+0.00250818
+0.00890154
+0.02072664
+0.02295182
+0.01151598
+0.00524599
+0.00273196
+0.00524813
+0.01152014
+0.02295817
+0.03338262
+0.02072119
+0.01480392
+0.01206626
+0.01480833
+0.02072955
+0.03339608

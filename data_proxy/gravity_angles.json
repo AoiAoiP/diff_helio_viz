@@ -1,0 +1,190 @@
+{
+  "angles": {
+    "10": {
+      "cos_theta": 0.984807753012208,
+      "pv_mm": 11.093902068421542,
+      "min_mm": -11.093902068421542,
+      "max_mm": 0.0,
+      "slope_rms_mrad": 3.263860689206325,
+      "nan_filled": 0,
+      "source": "data_proxy/ansys_csv/node_dump_10deg.csv"
+    },
+    "14": {
+      "cos_theta": 0.9702957262759965,
+      "pv_mm": 10.308475764403301,
+      "min_mm": -10.308475764403301,
+      "max_mm": 4.805654796456572e-17,
+      "slope_rms_mrad": 3.0308793793599413,
+      "nan_filled": 0,
+      "source": "data_proxy/ansys_csv/node_dump_14deg.csv"
+    },
+    "18": {
+      "cos_theta": 0.9510565162951535,
+      "pv_mm": 9.304943625673925,
+      "min_mm": -9.304943625673925,
+      "max_mm": 0.0,
+      "slope_rms_mrad": 2.7335665540486445,
+      "nan_filled": 0,
+      "source": "data_proxy/ansys_csv/node_dump_18deg.csv"
+    },
+    "22": {
+      "cos_theta": 0.9271838545667874,
+      "pv_mm": 8.118437783691798,
+      "min_mm": -8.118437783691798,
+      "max_mm": 1.387349555312279e-17,
+      "slope_rms_mrad": 2.382568323944119,
+      "nan_filled": 0,
+      "source": "data_proxy/ansys_csv/node_dump_22deg.csv"
+    },
+    "26": {
+      "cos_theta": 0.898794046299167,
+      "pv_mm": 6.79012370132172,
+      "min_mm": -6.79012370132172,
+      "max_mm": 0.0,
+      "slope_rms_mrad": 1.9903134649329277,
+      "nan_filled": 0,
+      "source": "data_proxy/ansys_csv/node_dump_26deg.csv"
+    },
+    "30": {
+      "cos_theta": 0.8660254037844387,
+      "pv_mm": 5.365640736494743,
+      "min_mm": -5.365640736494743,
+      "max_mm": 0.0,
+      "slope_rms_mrad": 1.5705339892856522,
+      "nan_filled": 0,
+      "source": "data_proxy/ansys_csv/node_dump_30deg.csv"
+    },
+    "34": {
+      "cos_theta": 0.8290375725550417,
+      "pv_mm": 3.971741097981302,
+      "min_mm": -3.971741097981302,
+      "max_mm": 0.0,
+      "slope_rms_mrad": 1.1554279198372672,
+      "nan_filled": 0,
+      "source": "data_proxy/ansys_csv/node_dump_34deg.csv"
+    },
+    "38": {
+      "cos_theta": 0.7880107536067219,
+      "pv_mm": 2.4716991962651793,
+      "min_mm": -2.4716991962651793,
+      "max_mm": 1.0063839486960724e-17,
+      "slope_rms_mrad": 0.6766945405279121,
+      "nan_filled": 0,
+      "source": "data_proxy/ansys_csv/node_dump_38deg.csv"
+    },
+    "42": {
+      "cos_theta": 0.7431448254773942,
+      "pv_mm": 0.9667668904791776,
+      "min_mm": -0.9667668904791776,
+      "max_mm": 0.0,
+      "slope_rms_mrad": 0.2676732243991921,
+      "nan_filled": 0,
+      "source": "data_proxy/ansys_csv/node_dump_42deg.csv"
+    },
+    "46": {
+      "cos_theta": 0.6946583704589973,
+      "pv_mm": 0.2858363178721327,
+      "min_mm": 0.0,
+      "max_mm": 0.2858363178721327,
+      "slope_rms_mrad": 0.07809146099911464,
+      "nan_filled": 0,
+      "source": "data_proxy/ansys_csv/node_dump_46deg.csv"
+    },
+    "50": {
+      "cos_theta": 0.6427876096865394,
+      "pv_mm": 1.3290257060296522,
+      "min_mm": -8.852253444076851e-18,
+      "max_mm": 1.3290257060296522,
+      "slope_rms_mrad": 0.36220996414294593,
+      "nan_filled": 0,
+      "source": "data_proxy/ansys_csv/node_dump_50deg.csv"
+    },
+    "54": {
+      "cos_theta": 0.5877852522924731,
+      "pv_mm": 2.1856612787556746,
+      "min_mm": -3.242482524441198e-18,
+      "max_mm": 2.1856612787556746,
+      "slope_rms_mrad": 0.5938606493587483,
+      "nan_filled": 0,
+      "source": "data_proxy/ansys_csv/node_dump_54deg.csv"
+    },
+    "58": {
+      "cos_theta": 0.5299192642332049,
+      "pv_mm": 2.8372040248795565,
+      "min_mm": -0.009475317619755659,
+      "max_mm": 2.827728707259801,
+      "slope_rms_mrad": 0.759657284847788,
+      "nan_filled": 0,
+      "source": "data_proxy/ansys_csv/node_dump_58deg.csv"
+    },
+    "62": {
+      "cos_theta": 0.46947156278589086,
+      "pv_mm": 2.7594157071040235,
+      "min_mm": -0.028529713979990132,
+      "max_mm": 2.730885993124034,
+      "slope_rms_mrad": 0.7603030692121218,
+      "nan_filled": 0,
+      "source": "data_proxy/ansys_csv/node_dump_62deg.csv"
+    },
+    "66": {
+      "cos_theta": 0.4067366430758002,
+      "pv_mm": 2.86169719943556,
+      "min_mm": -0.028997686550026783,
+      "max_mm": 2.8326995128855335,
+      "slope_rms_mrad": 0.7884704088337857,
+      "nan_filled": 0,
+      "source": "data_proxy/ansys_csv/node_dump_66deg.csv"
+    },
+    "70": {
+      "cos_theta": 0.3420201433256688,
+      "pv_mm": 2.412521601518181,
+      "min_mm": -0.001619276524823772,
+      "max_mm": 2.410902324993357,
+      "slope_rms_mrad": 0.6989464371248831,
+      "nan_filled": 0,
+      "source": "data_proxy/ansys_csv/node_dump_70deg.csv"
+    },
+    "73": {
+      "cos_theta": 0.29237170472273677,
+      "pv_mm": 2.227830997658048,
+      "min_mm": -6.777112560767922e-18,
+      "max_mm": 2.227830997658048,
+      "slope_rms_mrad": 0.6454802470839073,
+      "nan_filled": 0,
+      "source": "data_proxy/ansys_csv/node_dump_73deg.csv"
+    },
+    "76": {
+      "cos_theta": 0.24192189559966767,
+      "pv_mm": 1.9632998961491157,
+      "min_mm": -5.645397560645111e-18,
+      "max_mm": 1.9632998961491157,
+      "slope_rms_mrad": 0.5688648131200912,
+      "nan_filled": 0,
+      "source": "data_proxy/ansys_csv/node_dump_76deg.csv"
+    },
+    "78": {
+      "cos_theta": 0.20791169081775945,
+      "pv_mm": 1.7457907915648567,
+      "min_mm": -1.0526713868377004e-17,
+      "max_mm": 1.7457907915648567,
+      "slope_rms_mrad": 0.5058502484197649,
+      "nan_filled": 0,
+      "source": "data_proxy/ansys_csv/node_dump_78deg.csv"
+    },
+    "80": {
+      "cos_theta": 0.17364817766693041,
+      "pv_mm": 1.4998568005739314,
+      "min_mm": -9.10499663288679e-18,
+      "max_mm": 1.4998568005739314,
+      "slope_rms_mrad": 0.4345901128470311,
+      "nan_filled": 0,
+      "source": "data_proxy/ansys_csv/node_dump_80deg.csv"
+    }
+  },
+  "grid_size": 32,
+  "plate_W_m": 12.84,
+  "plate_L_m": 9.45,
+  "format": "w_du_dv_v2",
+  "planes": 3,
+  "plane_layout": "w, dw/du, dw/dv"
+}

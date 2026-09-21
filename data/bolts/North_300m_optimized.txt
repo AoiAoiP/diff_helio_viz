@@ -1,0 +1,41 @@
+# North 300m bolt strokes - end-to-end optimised (bounded tanh parameterisation)
+# source : bezier_opt/results_fw_tanh_a1e3/North_300m_STROKE_bolts.txt
+# run    : 200 iterations, lr=4e-4, Adam(0.9,0.999), 36 sun directions, anchor_lambda=1e3
+# units  : metres of stroke, zero-based (min = 0), shader convention  y += h * phi_b
+# count  : 35
+# max    : 0.0362 m
+0.0357104
+0.0230643
+0.0171833
+0.014918
+0.0172304
+0.023906
+0.0362138
+0.0242629
+0.0124766
+0.00589622
+0.00352309
+0.00620324
+0.012894
+0.0247212
+0.020952
+0.00903783
+0.00222214
+0
+0.0023127
+0.00910853
+0.0214685
+0.0227483
+0.0111019
+0.00441682
+0.0019255
+0.00435121
+0.0110465
+0.0230303
+0.0329541
+0.0200632
+0.0140207
+0.0115371
+0.014013
+0.0205973
+0.0338491

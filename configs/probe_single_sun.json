@@ -1,0 +1,36 @@
+{
+  "sun_file": "data/sundir/sundir_3val.txt",
+  "ellipse_file": "data/ellipse_north.txt",
+  "bolt_file": "",
+  "proxy_path": "data_proxy",
+  "output_dir": "out",
+
+  "receiver_radius": 10.0,
+  "receiver_height": 20.0,
+  "pixel_width": 157,
+  "pixel_height": 50,
+
+  "heliostat_width": 12.84,
+  "heliostat_length": 9.45,
+  "grid_size": 32,
+  "glass_depth": 0.004,
+  "refractive_index": 1.523,
+  "slope_error": 0.001,
+  "reflectivity": 0.88,
+
+  "sun_type": "buie",
+  "dni": 1000.0,
+  "csr": 0.01,
+  "sun_sigma": 0.00251,
+  "sun_theta_max": 0.00465,
+
+  "num_bolts": 35,
+  "num_bolts_x": 7,
+  "num_bolts_z": 5,
+  "bolt_margin": 0.08,
+  "disable_gravity": 0,
+  "gravity_normal_coupling": 1,
+
+  "ray_cull": 1,
+  "ray_cull_margin_mrad": 8.0
+}

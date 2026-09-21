@@ -1,0 +1,22 @@
+# Line endings: keep the working tree native on Windows, normalise to LF in the repo.
+* text=auto
+
+# Binary assets: never touch these.
+*.png  binary
+*.gif  binary
+*.bmp  binary
+*.npy  binary
+*.bin  binary
+*.exe  binary
+*.spv  binary
+
+# Shader / source files: the build tools on Windows are happy with CRLF checkouts,
+# but the repo stays LF so diffs are stable across machines.
+*.slang  text
+*.h       text
+*.cpp     text
+*.md      text
+*.py      text
+*.ps1     text
+*.json    text
+*.txt     text
