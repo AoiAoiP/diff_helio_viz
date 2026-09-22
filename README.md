@@ -247,17 +247,26 @@ WASD/QE 自由飞行（Shift 加速）
 | 256 | 1.01 M | 0.121 ms | 0.242 ms | 1.20 ms（835 FPS） | 8.4 Gray/s |
 | 1024 | 4.04 M | 0.357 ms | 0.57–0.63 ms | 1.19–1.41 ms（708–843 FPS） | 11.3 Gray/s |
 
-1024 spp 逐 pass（全部功能开启）：deform 0.019 · flux 0.357 · scene 0.049 ·
-bloom（9 个 pass）0.078 · composite 0.011 ms。
+1024 spp 逐 pass（全部功能开启）：deform 0.021 · flux 0.357 · scene 0.054 ·
+bloom（9 个 pass）0.059 · composite 0.011 · 内嵌图与 HUD 0.064 ms，合计 **0.566 ms**。
 
-同一份 4.04 M 光线负载下的 A/B 开关：
+同一份 4.04 M 光线负载下的 A/B 开关（1024 spp、收敛 t=1、`--fps 0 --present immediate`）：
 
-| 配置 | flux 段（GPU） | wall |
-|---|---|---|
-| 实时 kernel `flux_lite.slang` | 0.358 ms | 1.12 ms |
-| 关闭 A1 预裁剪 | 0.351 ms | 1.24 ms |
-| 打开逐光线全局原子 | 48.79 ms（约 136×） | 47.6 ms |
-| 参照链 `forward.slang`（原子恒开） | 78.0 ms | 84.2 ms |
+| 配置 | flux 段（GPU） | wall | 相对实时 kernel |
+|---|---|---|---|
+| 实时 kernel `flux_lite.slang` | 0.357 ms | 1.08 ms | 1.0× |
+| 打开逐光线全局原子（`--atomics`） | 48.87 ms | 48.4 ms | **137×** |
+| 参照链 `forward.slang`（原子恒开，原样复用） | 62.31 ms | 62.0 ms | **175×** |
+
+（flux 列取三轮最小值，wall 列取三轮中位。A1 预裁剪开关 `--no-cull` 不单列：实测它和上一行在
+0.35–0.48 ms 之间互换位置，也就是**没有可测差别**——本场景里它能挡掉的采样点本来就不多。）
+
+口径：只有原子档和参照链会把 GPU 压满几十秒，笔记本的功耗/温度墙会让同一份代码的 `flux` 读数漂
+±20%（同一会话里实时 kernel 读到 0.357 / 0.478 / 0.496 ms，参照链读到 62.31 / 62.49 / 63.72 ms）。
+最小值最接近"代码本身要多少时间"，因为时钟只会往下掉、不会超过标称频率。比率按同样口径配对；
+换成"每轮自己的实时 kernel 当分母"，比率会被这个抖动直接乘进去（原子档 99–140×、
+参照链 126–175×）。**不要跨批次拆开引用**：本文档这一批是 137× 与 175×，另一次重跑是 130× 与 169×，
+都在这条带里。复现：`python tools/perf_ab.py`。
 
 帧率上限（`--fps` / `F11`，默认 60）：60 → 16.687 ms（59.9 FPS）；120 → 8.349 ms（119.8 FPS）；
 不限速 + `MAILBOX` → 126.8 FPS；不限速 + `IMMEDIATE` → 708–843 FPS。
@@ -270,7 +279,8 @@ bloom（9 个 pass）0.078 · composite 0.011 ms。
 | `heliostat_core --bench-readback 200`（等价上游每太阳循环） | 0.50 ms | 1.09 ms |
 | 上游研究仓库，每个太阳方向 | — | ≈ 83 ms |
 
-原始数据用 `tools/perf_sweep.ps1` 现场重测（脚本默认写到 `docs/perf_viewer.csv`，900 帧一档）；
+原始数据用 `tools/perf_sweep.ps1` 现场重测（默认 400 帧一档，写到 `docs/perf_viewer.csv`），
+A/B 开关用 `tools/perf_ab.py`（四用例交替三轮取最小值，写到 `out/perf_ab.csv`）；
 曲线与对比图在 `docs/figs/`（`frametime_vs_spp.png`、`ab_switches.png`、`pass_breakdown.png`）。
 
 ---
