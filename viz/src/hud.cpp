@@ -232,7 +232,7 @@ void Hud::textShadow(float x, float y, const std::string &s, float r, float g, f
 void Hud::compass(float cx, float cy, float radius, const HudStats &st) {
     cx = std::round(cx);
     cy = std::round(cy);
-    rect(cx - radius - 10.0f, cy - radius - 10.0f, 2.0f * radius + 20.0f, 2.0f * radius + 34.0f, kBg[0], kBg[1],
+    rect(cx - radius - 10.0f, cy - radius - 10.0f, 2.0f * radius + 20.0f, 2.0f * radius + 22.0f, kBg[0], kBg[1],
          kBg[2], kBg[3]);
     rect(cx - radius - 10.0f, cy - radius - 10.0f, 2.0f * radius + 20.0f, 2.0f, kBlue[0], kBlue[1], kBlue[2]);
 
@@ -319,10 +319,8 @@ void Hud::compass(float cx, float cy, float radius, const HudStats &st) {
         rect(p.first - 4.0f, p.second - 4.0f, 8.0f, 8.0f, kGreen[0], kGreen[1], kGreen[2]);
         rect(p.first - 2.0f, p.second - 2.0f, 4.0f, 4.0f, kBg[0], kBg[1], kBg[2]);
     }
-    char buf[128];
-    std::snprintf(buf, sizeof(buf), "cam az %+.0f  sun az %+.0f / el %+.0f", st.cameraAzimuthDeg, st.sunAzimuth,
-                  st.sunElevation);
-    text(cx - radius - 8.0f, cy + radius + 2.0f, buf, kDim[0], kDim[1], kDim[2], 1.0f);
+    // No text under the rose: the "cam az / sun az" line overlapped the compass and was
+    // clipped, and both values are already shown in the panel and on the ground markers.
 }
 
 void Hud::bar(float x, float y, float w, float h, float frac, float r, float g, float b) {    frac = clampf(frac, 0.0f, 1.0f);
@@ -350,7 +348,13 @@ void Hud::slider(int id, float x, float y, float w, const char *label, float val
     m_sliders.push_back(s);
 
     text(x, y, label, kDim[0], kDim[1], kDim[2], 1.0f);
-    text(x + w - textWidth(valueText, 1.0f), y, valueText, kText[0], kText[1], kText[2], 1.0f);
+    // Right-align the value inside the track, but never let it run over the label
+    // (that is what made "beam target" and its value sit on top of each other).
+    const float labelW = textWidth(label, 1.0f) / m_scale;
+    const float valueW = textWidth(valueText, 1.0f) / m_scale;
+    float valueX = x + w - valueW;
+    if (valueX < x + labelW + 8.0f) valueX = x + labelW + 8.0f;
+    text(valueX, y, valueText, kText[0], kText[1], kText[2], 1.0f);
 }
 
 // ---------------------------------------------------------------- build ----
@@ -377,9 +381,15 @@ void Hud::buildOnce(const HudStats &st, float dt) {
     // time, so the usable layout space is the frame size divided by the scale.
     const float hudW = static_cast<float>(m_extent.width) / m_scale;
     const float hudH = static_cast<float>(m_extent.height) / m_scale;
-    // The panel is a status column, not a full-width bar. The box is fitted to the
-    // widest line it actually draws (see the fit step at the end of this function).
-    const float panelW = clampf(hudW * 0.50f, 260.0f, 430.0f);
+    // The panel is a status column, not a full-width bar.
+    //
+    // The width is FIXED for a given window size (it does not follow the content), so
+    // it never jumps when a readout changes width -- S95 46.26 -> 226.67, a toast
+    // appearing, a longer mirror name. Lines that would be wider than the panel are
+    // truncated in line() instead. Tune the two numbers below to change the width:
+    //   hudW * 0.46  = share of the window width
+    //   300 .. 460   = clamps, in HUD units (1 HUD unit = 1 px at --hud-scale 1)
+    const float panelW = clampf(hudW * 0.46f, 300.0f, 460.0f);
     const float panelTop = pad;
     const float panelLeft = pad;
     const float x0 = panelLeft + pad;
@@ -422,12 +432,14 @@ void Hud::buildOnce(const HudStats &st, float dt) {
     char buf[256];
     float y = panelTop + pad;
     auto newline = [&]() { y += lineH; };
-    // Every panel line goes through this: it emits the text and tracks the widest one
-    // so the panel box can be fitted to it.
-    float textW = 0.0f;
+    // Every panel line goes through this: it truncates to the panel width (so a long
+    // readout can never spill outside the box, and never widens it either).
+    const float textBudget = panelW - 2.0f * pad;
+    const size_t maxChars = static_cast<size_t>(textBudget / (kFontWidth + 1.0f));
     auto line = [&](const char *s, const float *col) {
-        text(x0, y, s, col[0], col[1], col[2], 1.0f);
-        textW = std::max(textW, textWidth(s, 1.0f) / m_scale);
+        std::string t(s);
+        if (t.size() > maxChars) t = t.substr(0, maxChars > 2 ? maxChars - 2 : maxChars) + "..";
+        text(x0, y, t, col[0], col[1], col[2], 1.0f);
     };
     const size_t bgStart = m_cpu.size();
     text(x0, y, "HELIOSTAT STUDIO", kGreen[0], kGreen[1], kGreen[2], scale);
@@ -483,11 +495,11 @@ void Hud::buildOnce(const HudStats &st, float dt) {
     // does), so this is the control that walks the spot across the receiver.
     std::snprintf(buf, sizeof(buf), "%+.1f deg = %+.0f px", st.aimOffsetDeg,
                   st.aimOffsetDeg / 360.0f * 157.0f);
-    slider(6, x0, y, sw, "beam target (aim point on receiver)", (st.aimOffsetDeg + 60.0f) / 120.0f, buf);
+    slider(6, x0, y, sw, "beam target", (st.aimOffsetDeg + 60.0f) / 120.0f, buf);
     newline();
     newline();
     std::snprintf(buf, sizeof(buf), "t = %.2f", st.convergence);
-    slider(3, x0, y, sw, "convergence t (flat -> optimised)", st.convergence, buf);
+    slider(3, x0, y, sw, "convergence t", st.convergence, buf);
     newline();
     newline();
     std::snprintf(buf, sizeof(buf), "%.2f", st.exposure);
@@ -549,24 +561,22 @@ void Hud::buildOnce(const HudStats &st, float dt) {
     }
 
     // ---- fit the panel box to what was actually drawn ----
-    // Both dimensions come from the emitted content, and the background quads are
-    // *prepended* to the vertex list (the HUD blends in draw order, so the box has to
-    // be drawn before the text it sits behind).
+    // Height comes from the emitted content; the width is the fixed value above. The
+    // background quads are prepended to the vertex list because the HUD blends in draw
+    // order, so the box has to be drawn before the text it sits behind.
     {
         const float contentH = y + pad - panelTop;
         const float avail = hudH - 2.0f * pad;
-        const float neededW = std::min(textW + pad + 6.0f, hudW - 2.0f * pad);
-        m_lastContentFits = (contentH <= avail) && (textW + pad + 6.0f <= hudW - 2.0f * pad);
+        m_lastContentFits = (contentH <= avail) && (panelW + pad <= hudW - pad);
         const float panelH = std::min(contentH, avail);
         m_panelHeight = panelH + pad;
-        m_panelWidth = neededW + pad;
+        m_panelWidth = panelW + pad;
 
-        // Keep the content, emit the background, then append the content again.
         const std::vector<Vertex> content(m_cpu.begin() + static_cast<ptrdiff_t>(bgStart), m_cpu.end());
         m_cpu.resize(bgStart);
-        rect(panelLeft, panelTop, neededW, panelH, kBg[0], kBg[1], kBg[2], kBg[3]);
-        rect(panelLeft, panelTop, neededW, 2.0f, kBlue[0], kBlue[1], kBlue[2]);
-        rect(panelLeft, panelTop + panelH - 1.0f, neededW, 1.0f, kPanelLine[0], kPanelLine[1],
+        rect(panelLeft, panelTop, panelW, panelH, kBg[0], kBg[1], kBg[2], kBg[3]);
+        rect(panelLeft, panelTop, panelW, 2.0f, kBlue[0], kBlue[1], kBlue[2]);
+        rect(panelLeft, panelTop + panelH - 1.0f, panelW, 1.0f, kPanelLine[0], kPanelLine[1],
              kPanelLine[2]);
         m_cpu.insert(m_cpu.end(), content.begin(), content.end());
     }

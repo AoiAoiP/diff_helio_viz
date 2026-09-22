@@ -5,6 +5,24 @@
 
 ---
 
+## 0. 界面尺寸想手动调优，改哪里？
+
+| 想改什么 | 位置 |
+|---|---|
+| 面板宽度 | `viz/src/hud.cpp`，`Hud::buildOnce` 顶部：`const float panelW = clampf(hudW * 0.46f, 300.0f, 460.0f);`（`hudW` 是窗口宽度除以 UI 比例；两个数字分别是"占窗口比例"与"上下限"，单位是 HUD 单位，1 HUD 单位 = UI 比例 1 时的 1 px） |
+| 面板内边距 / 行高 | `viz/src/hud.cpp`，同函数开头的 `pad` 与 `lineH` |
+| 面板位置 | 同函数开头的 `panelLeft` / `panelTop` |
+| 面板内容行数 | 同函数中段的表头 3 行、pass 表 5 行、滑杆 4 行 × 2、状态 3 行；行数变了高度会跟着变（高度始终按内容测量，不会裁剪） |
+| 滑杆长度与分布 | 同函数：`const float sw = panelW - 2.0f * pad - 96.0f;`（`sw` 是长滑杆宽度，曝光/bloom 三个短滑杆取 `sw * 0.31` 等比例） |
+| UI 与字体总体比例 | 运行期按 `U` 循环，或 `--hud-scale <f>` 钉死；自动档位在 `viz/src/viz_main.cpp` 的 `applyAutoScale`（1 / 1.5 / 2 / 3 四档，阈值 `fit >= 1.4 / 1.9 / 2.8`） |
+| 左下角操作指南 | `viz/src/hud.cpp`，`help[5]` 数组（改文字即可，底板宽度会自动跟随） |
+| 罗盘位置与半径 | `viz/src/hud.cpp` 中 `compass(cx, cy, 52.0f, st)` 的调用点，以及 `Hud::compass` 内部 |
+
+面板宽度是**固定值**（不随内容变化），所以调一次就稳定；超出宽度的行会被截断为 `..`，
+而不是把面板撑宽。高度仍按实际内容测量，日轨演示会多两行。
+
+---
+
 ## 1. bloom 是什么？为什么调高之后会出现意料之外的亮斑？
 
 bloom 的链路是"亮通道 → 多级降采样模糊 → 上采样叠加"：先把超过阈值的亮度抠出来，
@@ -128,19 +146,34 @@ boltHeight = t × optimizedHeight
 ## 7. 每个按键做什么？
 
 每个按键都会在面板显示一行提示（约 3.5 秒）并写入日志，所以"开关生效了但画面变化不明显"
-和"按键没生效"可以区分。其中 `8` 与 `[` `]` 曾经是真 bug：
+和"按键没生效"可以区分。下面这几条曾经是真 bug：
 
 | 按键 | 作用 | 备注 |
 |---|---|---|
-| `M` | 热力图量程 自动 ↔ 固定 | 自动档按回读峰值 ×1.25 跟随；固定档把上限钉在当前值。峰值稳定时画面几乎不变，看面板 `heat auto/FIXED` |
+| `M` | 热力图量程 自动 ↔ 固定 | 自动档按回读峰值 ×1.25 跟随；固定档把上限钉在当前值。面板显示 `heat auto/FIXED` |
 | `8` | 镜场光追 开 / 关 | 关闭时整条 compute 链不记录：flux 段变成 0.000 ms（整帧 GPU 0.34 → 0.240 ms），接收器转冷态，S95 归零，镜场不再绘制。内核文件本身不变 |
 | `[` `]` | 微调收敛 `t` | 曾经完全无效：`[` `]` 不是 VK 码（Windows 上是 `VK_OEM_4`/`VK_OEM_6`），旧代码用 ASCII 比较永远不成立 |
+| `U` | UI 比例 | 曾经只改了变量、没把比例推给 HUD，所以屏幕上没反应；现在按一次立即重排。面板显示 `ui x…` |
 | `F4` | 机位：光束侧视 | 从选中镜方位 +60°、190 m 外侧看入射与反射光束 |
 | `F7` | 镜面视图四档 | 面板显示当前档名：`shaded` / `normals` / `slope error` / `height` |
 | `F8` | 光束三档 | `off` / `normal` / `strong (2×)`；光束是加性很淡的效果，面板显示当前档 |
 | `F9` | 曝光 ×1.25 | `Ctrl+9` 回退 |
-| `U` | UI 比例 | AUTO → 1 → 1.5 → 2 → 2.5 → 3 |
 | `F11` | 帧率上限 | 60 / 120 / 不限，HUD 首行显示当前值 |
+
+滑块或读数"不动"的同类问题还有一个：`HudStats` 的 `aimOffsetDeg`、`fluxCeil`、`fluxPeak`、
+`heatAutoRange` 四个字段在 HUD 里被读取，但在 `viz_main.cpp` 里从未赋值，所以瞄准点滑杆的
+数值恒为 0、固定量程显示恒为 auto、光斑图标题的峰值恒为 0。这类"读了但没赋值"的字段可以用
+
+```powershell
+python - <<'EOF'
+import re
+used = set(re.findall(r'st\.([A-Za-z_]\w*)', open('viz/src/hud.cpp', encoding='utf-8').read()))
+setv = set(re.findall(r'hs\.([A-Za-z_]\w*)\s*=', open('viz/src/viz_main.cpp', encoding='utf-8').read()))
+print('read but never set:', sorted(used - setv))
+EOF
+```
+
+检查，应当输出空列表。
 
 ---
 

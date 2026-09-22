@@ -1151,6 +1151,14 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, LPWSTR, int) {
                 }
                 ui.hudScale = ladder[(idx + 1) % 6];
                 hudScaleLocked = ui.hudScale > 0.0f;
+                // The scale has to be pushed into the HUD here: applyAutoScale() returns
+                // early while the scale is pinned, so setting ui.hudScale alone did
+                // nothing on screen.
+                if (hudScaleLocked) {
+                    hud.setScale(ui.hudScale);
+                } else {
+                    applyAutoScale(ctx.extent());
+                }
                 toast(ui.hudScale > 0.0f ? ("U -> UI scale " + trimFloat(ui.hudScale))
                                          : std::string("U -> UI scale AUTO"));
             }
@@ -1664,6 +1672,10 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, LPWSTR, int) {
                 hs.gravity = fs2.gravityEnabled;
                 hs.s95Area = ui.s95Area;
                 hs.fluxSum = ui.fluxSum;
+                hs.fluxPeak = ui.fluxPeak;
+                hs.fluxCeil = ui.fluxCeil;
+                hs.heatAutoRange = ui.heatAutoRange;
+                hs.aimOffsetDeg = ui.aimOffsetDeg;
                 hs.convergence = ui.convergence;
                 hs.deformScale = sin.deformScale;
                 hs.exposure = ui.exposure;
