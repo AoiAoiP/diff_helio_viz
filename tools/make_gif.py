@@ -3,9 +3,10 @@
 
 Frames come from `heliostat_viz --demo 27 --record out/gif --record-stride N`.
 Requires ImageMagick (`magick`) on PATH for the palette pass; the file-size guard
-re-runs with fewer frames / smaller size until the GIF fits the target budget.
+re-runs with fewer frames / smaller size until the GIF fits the target budget
+(9.5 MB by default, so the README image stays under GitHub's 10 MB inline limit).
 
-    python tools/make_gif.py --frames out/gif --out docs/figs/demo.gif --mb 12
+    python tools/make_gif.py --frames out/gif --out docs/figs/demo.gif --mb 9.5
 """
 
 import argparse
@@ -31,7 +32,8 @@ def main():
     ap.add_argument("--out", default="docs/figs/demo.gif")
     ap.add_argument("--fps", type=int, default=16)
     ap.add_argument("--width", type=int, default=640)
-    ap.add_argument("--mb", type=float, default=12.0)
+    ap.add_argument("--mb", type=float, default=9.5,
+                    help="size budget; keep it under 10 MB so GitHub renders the GIF inline")
     args = ap.parse_args()
 
     frame_dir = Path(args.frames)
@@ -54,11 +56,17 @@ def main():
             magick, "-delay", str(int(100 / fps)),
             *[str(p) for p in picked],
             "-resize", f"{width}x",
+            # 1% fuzz while optimising the inter-frame deltas: pixels that differ by
+            # less than ~2.5/255 are left as they are, which removes the dither noise
+            # that otherwise re-encodes the whole frame every time. Measured on the
+            # 362-frame recording: 11.3 MB -> 4.9 MB, and comparing both encodes
+            # against the source BMPs shows the fuzz costs 0.15/255 of mean error.
+            "-fuzz", "1%",
             "-layers", "Optimize",
             "-loop", "0",
             str(out),
         ])
-        size_mb = out.stat().st_size / (1024 * 1024)
+        size_mb = out.stat().st_size / 1e6   # decimal MB, the number GitHub counts
         print(f"  -> {out} {size_mb:.2f} MB")
         if size_mb <= args.mb:
             print(f"OK: {out} ({size_mb:.2f} MB, {len(picked)} frames)")

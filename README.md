@@ -53,7 +53,9 @@ cd build\Release
 
 # 脚本化 27 秒演示（相机、滑杆、镜场、日轨按固定时间轴走一遍）
 .\heliostat_viz.exe --demo 27 --validate
+# 录 README 顶部的 GIF：演示录成 BMP 序列，再编码为 362 帧 / 640×360 / 14 fps（4.9 MB）
 .\heliostat_viz.exe --demo 27 --demo-exit --hud-scale 1.4 --record ..\..\out\gif --record-stride 4
+python ..\..\tools\make_gif.py --frames ..\..\out\gif --out ..\..\docs\figs\demo.gif --fps 14 --width 640
 
 # 德令哈夏至日正午（时角钉在 0，动画暂停）
 .\heliostat_viz.exe --sunpath 1 --sun-hour 0
@@ -295,3 +297,4 @@ bloom（9 个 pass）0.078 · composite 0.011 ms。
 | 面板内容与尺寸 | `python tools/panel_probe.py` | 面板占屏 17.9%（1280×720）/ 18.0%（1920×1080），盒内内容占 26–42% |
 | 光斑图居中 | `python tools/inset_probe.py` | 4 镜位质心偏移 ≤ 2.5 px |
 | 螺栓标记可见性 | `python tools/bolt_probe.py` | 四镜位 35 / 35 / 34 / 35 个 |
+| 演示 GIF 重录 | `python tools/gif_check.py --old out/old_demo.gif` | 8 个阶段逐段一致（各段亮度中位差 ≤ 0.22 / 255） |
