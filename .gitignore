@@ -28,3 +28,7 @@ PLAN.md
 PROMPT.md
 NOTES_provenance.md
 viz/
+
+# docs/ 下只发布 figs/：性能日志、FAQ、扫描 CSV 等笔记都留在本机
+docs/*
+!docs/figs/

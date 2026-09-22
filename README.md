@@ -21,7 +21,7 @@
 主要画面元素：接收器光斑与光束、右下角光斑图（带 S95 等值线，可开关）、NSWE 罗盘与地面
 方位标、四台定日镜的镜场（只有选中镜执行光追）、德令哈夏至日真实日轨。
 
-参数含义、按键表与常见问题的解释见 [docs/faq.md](docs/faq.md)。
+参数含义、按键表与每个 pass 的口径都在下面列出；`--help` 会打印同一份键位。常见问题的解释在程序内面板与本文的性能章节里。
 
 ---
 
@@ -91,7 +91,7 @@ python ..\..\tools\plot_perf.py
 ├─ viz/src/                    viewer：平台层、交换链、图形 pass、HUD、计时器、相机
 ├─ viz/shaders/                viewer 着色器：flux_lite / scene / post / hud
 ├─ tools/                      测量与验收脚本（Python + PowerShell）
-└─ docs/                       perf_log.md、faq.md、perf_viewer.csv、figs/
+└─ docs/figs/                   演示 GIF 与性能/对比图（本目录下的其它笔记不随仓库发布）
 ```
 
 每帧一次 `vkQueueSubmit`，2 帧飞行，逐 image fence，动态渲染（无 render pass），reversed-Z 无限远投影：
@@ -228,7 +228,7 @@ WASD/QE 自由飞行（Shift 加速）
 | `F9` | 曝光 ×1.25（`Ctrl+9` 回退） |
 | `F10` | present 模式循环 |
 | `F11` | 帧率上限 60 / 120 / 不限 |
-| `Space` | 截图 |
+| `Space` | 截图：当前工作目录下 `shot_001.bmp`、`shot_002.bmp`…（同时写出同名 `.txt` ASCII 预览） |
 | `ESC` | 退出 |
 
 ---
@@ -270,8 +270,8 @@ bloom（9 个 pass）0.078 · composite 0.011 ms。
 | `heliostat_core --bench-readback 200`（等价上游每太阳循环） | 0.50 ms | 1.09 ms |
 | 上游研究仓库，每个太阳方向 | — | ≈ 83 ms |
 
-原始数据：`docs/perf_viewer.csv`；逐 pass 与修复记录：`docs/perf_log.md`；
-曲线与对比图：`docs/figs/`（`frametime_vs_spp.png`、`ab_switches.png`、`pass_breakdown.png`）。
+原始数据用 `tools/perf_sweep.ps1` 现场重测（脚本默认写到 `docs/perf_viewer.csv`，900 帧一档）；
+曲线与对比图在 `docs/figs/`（`frametime_vs_spp.png`、`ab_switches.png`、`pass_breakdown.png`）。
 
 ---
 
@@ -292,7 +292,7 @@ bloom（9 个 pass）0.078 · composite 0.011 ms。
 | viewer kernel | `heliostat_viz --dump-flux` + numpy 比对 | 逐像素 0.0 |
 | 验证层 | `heliostat_viz --validate --demo 27` | 0 error / 0 warning |
 | 控件交互 | `powershell -File tools/acceptance_interaction.ps1 -Validate` | PASS 8/8 |
-| 按键 | `powershell -File tools/acceptance_keys.ps1` | PASS 13/13 |
+| 按键 | `powershell -File tools/acceptance_keys.ps1` | PASS 21/21（含 `Space` 在**不带任何截图参数**的启动下确实落盘） |
 | 窗口 | `powershell -File tools/acceptance_window.ps1 -Validate` | PASS（8 次交换链重建，0 报错） |
 | 面板内容与尺寸 | `python tools/panel_probe.py` | 面板占屏 17.9%（1280×720）/ 18.0%（1920×1080），盒内内容占 26–42% |
 | 光斑图居中 | `python tools/inset_probe.py` | 4 镜位质心偏移 ≤ 2.5 px |

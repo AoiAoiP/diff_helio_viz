@@ -1012,11 +1012,19 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, LPWSTR, int) {
                                     VK_BUFFER_USAGE_TRANSFER_DST_BIT, true);
             }
         };
-        if (!opts.screenshot.empty() || !opts.recordDir.empty()) createCaptureBuffers(ctx.extent());
+        // The Space key needs the same buffers as --screenshot / --record, so they are
+        // allocated for every launch. Two frames of them cost
+        // 2 * width * height * 4 bytes of host-visible memory (7.4 MB at 1280x720).
+        // Allocating them only when a CLI capture option was given is exactly why Space
+        // used to do nothing at all on a normal interactive run: `capture[i].buffer` was
+        // null, the copy was skipped, and nothing anywhere said so.
+        createCaptureBuffers(ctx.extent());
 
         bool running = true;
         int frameNo = 0;
-        int shots = 0;
+        int shots = 0;        // Space presses waiting to be captured
+        int shotSeq = 0;      // number announced by the toast for the next press
+        int shotWritten = 0;  // shots actually written, so the file numbers stay in order
         double titleTimer = 0.0;
         // Every key/toggle announces itself in the panel for ~3.5 s: several switches
         // (heat range, beams, cull, atomics) only change something subtle, and a HUD
@@ -1100,7 +1108,17 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, LPWSTR, int) {
 
             // ------------------------------------------------------------ input --
             if (input.keyPressed(VK_ESCAPE)) break;
-            if (input.keyPressed(VK_SPACE)) shots++;   // screenshot request
+            if (input.keyPressed(VK_SPACE)) {
+                // Same convention as every other key: acknowledge in the panel (and in
+                // the log) instead of silently doing something you cannot see. The file
+                // itself lands two frames later, when this slot's fence has been waited on.
+                shots++;
+                shotSeq++;
+                char sbuf[96];
+                std::snprintf(sbuf, sizeof(sbuf), "Space -> screenshot shot_%03d.bmp (written in 2 frames)",
+                              shotSeq);
+                toast(sbuf);
+            }
             if (input.keyPressed('P')) {
                 ui.paused = !ui.paused;
                 toast(ui.paused ? "P -> paused (physics frozen)" : "P -> running");
@@ -1489,7 +1507,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, LPWSTR, int) {
                 post.resize(ext);
                 hud.resize(ext);
                 applyAutoScale(ext);   // the auto UI scale follows the new window size
-                if (capture[0].buffer) createCaptureBuffers(ext);
+                if (capture[0].buffer) createCaptureBuffers(ext);   // always allocated now
                 std::printf("[viz] resize -> %ux%u\n", ext.width, ext.height);
                 continue;
             }
@@ -1738,16 +1756,23 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, LPWSTR, int) {
             timer.stamp(cmd, frameIdx, viz::kStageHud);
 
             // ------------------------------------------------------- capture --
-            const bool wantShot = shots > 0 || (!opts.screenshot.empty() && frameNo >= opts.screenshotFrame) ||
-                                  (!opts.recordDir.empty() && frameNo % opts.recordStride == 0);
+            // Priority: an interactive Space request first, then a recorded frame, then
+            // the --screenshot request. The old order checked --record first, which meant
+            // a Space press during a recording wrote a frame_*.bmp under the recorder's
+            // name and left `shots` set forever - the recorder then dumped *every* frame
+            // until exit instead of one screenshot.
+            const bool recordDue = !opts.recordDir.empty() && frameNo % opts.recordStride == 0;
+            const bool cliShotDue = !opts.screenshot.empty() && frameNo >= opts.screenshotFrame;
+            const bool wantShot = shots > 0 || recordDue || cliShotDue;
             if (wantShot && capture[frameIdx].buffer) {
                 char name[512];
-                if (!opts.recordDir.empty()) {
+                if (shots > 0) {
+                    shotWritten++;
+                    std::snprintf(name, sizeof(name), "shot_%03d.bmp", shotWritten);
+                    shots--;
+                } else if (recordDue) {
                     fs::create_directories(opts.recordDir);
                     std::snprintf(name, sizeof(name), "%s/frame_%05d.bmp", opts.recordDir.c_str(), frameNo);
-                } else if (shots > 0) {
-                    std::snprintf(name, sizeof(name), "shot_%03d.bmp", shots);
-                    shots--;
                 } else {
                     std::snprintf(name, sizeof(name), "%s", opts.screenshot.c_str());
                 }

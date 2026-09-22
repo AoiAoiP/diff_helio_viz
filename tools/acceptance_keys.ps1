@@ -7,6 +7,9 @@
 #   * 8 must switch the field's ray tracing off/on (field 1 -> 0 -> 1)
 #   * M / F7 / F8 / U must cycle the heat range, the plate view, the beams and the
 #     UI scale, which the viewer reports as fields of its --state-log line
+#   * Space must write a screenshot WITHOUT any --screenshot / --record option on
+#     the command line. It used to be a silent no-op there, because the capture
+#     buffers were only allocated when one of those options was present.
 #   * every one of them must also print an acknowledgement line
 #
 # Everything is asserted from the viewer's own state lines and log, so the checks are
@@ -52,6 +55,15 @@ Push-Location $root
 New-Item -ItemType Directory -Force -Path (Split-Path $Log) | Out-Null
 Remove-Item $Log -ErrorAction SilentlyContinue
 
+# The viewer runs with its working directory inside out\, so the screenshots the
+# Space check produces never land in the repository root. Assets are resolved from
+# the executable's own directory, so a different cwd changes nothing else.
+$exeAbs = (Resolve-Path $Exe).Path
+$logAbs = Join-Path $root $Log
+$shotsDir = Join-Path $root "out\shots"
+Remove-Item $shotsDir -Recurse -Force -ErrorAction SilentlyContinue
+New-Item -ItemType Directory -Force -Path $shotsDir | Out-Null
+
 function Read-Log([string]$path) {
     for ($i = 0; $i -lt 6; $i++) {
         try {
@@ -81,8 +93,9 @@ function Check($name, $cond) {
 }
 
 # ---------------------------------------------------------------- mirror keys --
-$proc = Start-Process -FilePath $Exe -ArgumentList @("--frames", "6000", "--log", $Log,
-                                                     "--state-log", "--no-ui", "--fps", "60") -PassThru
+$proc = Start-Process -FilePath $exeAbs -ArgumentList @("--frames", "6000", "--log", $logAbs,
+                                                       "--state-log", "--no-ui", "--fps", "60") `
+                      -WorkingDirectory $shotsDir -PassThru
 $hwnd = [IntPtr]::Zero
 for ($i = 0; $i -lt 60; $i++) {
     Start-Sleep -Milliseconds 250
@@ -137,8 +150,25 @@ Write-Host "[ : t -> $tAfterOpen ;  ] : t -> $tAfterClose"
 Check "[ lowers the convergence t" ($null -ne $tAfterOpen -and $tAfterOpen -lt 0.95)
 Check "] raises the convergence t again" ($null -ne $tAfterClose -and $tAfterClose -gt $tAfterOpen)
 
+# ------------------------------------------------------------- Space shot --
+# No --screenshot / --record was passed, which is exactly the case that used to
+# make Space a silent no-op: the capture buffers are now allocated unconditionally.
+[KeyTest]::Tap($hwnd, 0x20)
+Start-Sleep -Milliseconds 1500
+$shots = @(Get-ChildItem (Join-Path $shotsDir "shot_*.bmp") -ErrorAction SilentlyContinue)
+Write-Host "Space : shot files -> $($shots.Count) ($(($shots | ForEach-Object { $_.Name }) -join ', '))"
+Check "Space writes a screenshot without any capture option" ($shots.Count -ge 1)
+if ($shots.Count -ge 1) {
+    $shotLog = Read-Log $logAbs
+    Check "Space announces itself in the log" ($shotLog -match 'Space -> screenshot shot_\d+\.bmp')
+    Check "Space writes the .bmp plus its ASCII preview" `
+          (($shotLog -match '\[shot\] shot_\d+\.bmp \(\d+x\d+\)') -and
+           (Test-Path ($shots[0].FullName -replace '\.bmp$', '.txt')))
+    Check "the screenshot is not empty" ($shots[0].Length -gt 100000)
+}
+
 # ------------------------------------------------------- acknowledgement lines --
-$log = Read-Log $Log
+$log = Read-Log $logAbs
 Check "the viewer acknowledges every toggle in its log" `
       (($log -match '4/5/6/7 -> tracing mirror') -and ($log -match '8 -> field ray tracing OFF') -and
        ($log -match 'M -> heat range') -and ($log -match 'F7 -> plate view') -and
