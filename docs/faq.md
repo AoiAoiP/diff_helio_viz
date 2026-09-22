@@ -1,8 +1,5 @@
 # 常见问题与实现说明
 
-主 README 只保留"怎么用、参数是什么、性能如何"。这里放需要展开解释的八件事，
-每条都给出可复现的实测数字。所有测量的口径见主 README 的"性能说明"一节。
-
 ---
 
 ## 0. 界面尺寸想手动调优，改哪里？
@@ -25,25 +22,86 @@
 
 ## 1. bloom 是什么？为什么调高之后会出现意料之外的亮斑？
 
-bloom 的链路是"亮通道 → 多级降采样模糊 → 上采样叠加"：先把超过阈值的亮度抠出来，
-用 5 级 13-tap 降采样 / 9-tap tent 升采样摊开成大范围光晕，再按强度加回原图。
-它不改变任何物理数值，只影响观感（太阳盘、镜面高光、接收器核心的辉光）。
+bloom 发生在 tonemap **之前**，两个参数各只在管线里出现一次：
 
-亮斑来自亮通道的**阈值**。旧的阈值硬编码为 `1.0`，而本场景天空渐变本身就接近 1.0，
-于是整片天空都通过了亮通道，被 5 级模糊摊成大片光晕；强度调高后这些光晕就变成
-"凭空出现的亮斑"。逐像素对比"关 bloom 的同一帧"（强度固定 1.5）：
+```
+compute 链（flux）→ scene pass → HDR 目标（R16G16B16A16_SFLOAT，线性、未 tonemap）
+                                   │
+                                   ├─ 亮通道      fsBloomPre   → mip0   （半分辨率起）
+                                   ├─ 降采样 ×4   fsBloomDown  → mip1..mip4（1/4 … 1/32）
+                                   ├─ 升采样 ×4   fsBloomUp    → 加法混合回上一级
+                                   └─ 合成        fsComposite
+                                         col = hdr + bloom * bloomStrength    ← 强度只在这里
+                                         col *= exposure ; ACES ; vignette → sRGB
+```
 
-| 亮通道阈值 | 被 bloom 额外点亮的像素 | 占全屏 | 强光晕像素(>0.15) | 最大增量 |
-|---|---|---|---|---|
-| 1.0（旧默认） | 168 579 | 18.29% | 9 668 | 0.325 |
-| **2.5（现默认）** | **1 952** | **0.21%** | 498 | 0.307 |
-| 6.0（≈关闭） | 0 | 0% | 0 | 0.008 |
+| 参数 | 出现位置 | 作用 |
+|---|---|---|
+| `bloomThr` | 亮通道 pass：`post.slang` 的 `brightPass()` | **选择器**：哪些像素允许参与光晕 |
+| `bloom` 强度 | 合成：`post.slang` 第 133 行 `col = hdr + bloom * post.params.x;` | **增益**：加回去多少 |
 
-阈值取 2.5 时只有真正 HDR 的发射体（太阳盘约 16×、镜面高光约 8×、接收器核心约 3.6×）
-会发光，光晕像素减少约 85×。另有 `bloomClamp = 6.0` 上限，避免单个超高像素种出一圈亮斑。
+降采样与升采样没有任何参数，链长固定 5 级，所以这两个滑杆只改变"选谁"和"加多少"，
+不改变开销（bloom 9 个 pass 合计约 0.078 ms，与两参数无关）。
 
-复现：`python tools/make_bloom_fig.py`（生成 `docs/figs/bloom_threshold.png`），
-逐像素统计用 `python tools/bloom_probe.py --diff <关bloom> <开bloom>`。
+**`bloomThr` 的单位是"白点倍数"**，输入是 tonemap 前的线性 HDR 值：
+
+```slang
+float3 brightPass(float3 c, float threshold, float clampPeak) {
+    c = min(c, float3(clampPeak));                       // ① 先压掉萤火虫（默认 6.0）
+    float br = max(c.r, max(c.g, c.b));                  // ② 取最亮通道
+    const float knee = 0.35f;                            // ③ 软膝半宽
+    float soft = clamp(br - threshold + knee, 0.0f, 2.0f * knee);
+    soft = soft * soft / (4.0f * knee);                  // ④ 膝内二次过渡
+    float contribution = max(soft, br - threshold) / max(br, 1e-5f);
+    return c * contribution;                             // ⑤ 只保留超出阈值的部分
+}
+```
+
+`contribution` 在 `br ≤ thr − 0.35` 时为 0、在 `br ≥ thr + 0.35` 时为 1，中间是二次过渡（软膝），
+所以不会有硬切边。本场景里真正超过阈值的只有三样东西：**太阳盘（约 16×）**、
+**镜面高光（约 8×）**、**接收器发射核心（约 3.6×）**；天空渐变本身就在 1.0 附近。
+因此旧默认值 1.0 等于"整片天空都是光源"。`clampPeak = 6.0` 在阈值之前执行，
+所以阈值调到 6.0 及以上时亮通道输出为 0，等于关闭 bloom。
+
+`docs/figs/bloom_sources.png`（由 `tools/bloom_sources.py` 生成）把这件事画出来了——
+绿色 = 被 bloom 实际点亮的像素：
+
+| bloomThr（强度固定 1.5） | 被点亮的像素 | 占全屏 | 现象 |
+|---|---|---|---|
+| 1.0 | 180 007 | **19.53%** | 整片天空变绿：天空自己成了光源 |
+| **2.5（默认）** | **3 480** | **0.38%** | 只有太阳盘、镜面高光、接收器光斑 |
+| 6.0 | 0 | 0% | 全部被 clampPeak 挡住，等于关闭 |
+
+另一种口径（`tools/bloom_probe.py`，强度 1.5）结论一致：阈值 1.0 → 168 579 px（18.29%）被额外
+点亮、最大增量 0.325；阈值 2.5 → 1 952 px（0.21%）。
+
+**强度**只作用于已经通过亮通道并被模糊过的那张图，所以它放大的是"亮通道选出来的东西"——
+阈值太低时被放大的就是天空本身，这就是"调高 bloom 出现意料之外亮斑"的完整机制。
+另外后面还有 ACES 这条 filmic 曲线，强度不是线性可见的：强度加倍不会让光晕亮度加倍。
+
+| 想要的效果 | 设置 |
+|---|---|
+| 光斑/太阳发光、天空干净 | `bloomThr` 2.5、强度 0.4–0.8（默认 0.55） |
+| 现场演示阈值在做什么 | 强度拉到 1.5–2.0，然后在 thr 1.0 ↔ 2.5 之间拖 |
+| 完全关闭 | 强度 0（或 thr ≥ 6） |
+
+HUD 面板与右下角光斑图是**合成之后**才画的（`vk_scene.renderOverlays`、`hud.render`），
+永远不会被 bloom 糊到——这也是光斑图可以当"测量显示"用的原因。
+
+代码位置：
+
+| 内容 | 位置 |
+|---|---|
+| 亮通道公式（阈值 + 软膝 + 萤火虫钳制） | `viz/shaders/post.slang` `brightPass()` |
+| 四个 pass | 同文件 `fsBloomPre` / `fsBloomDown` / `fsBloomUp` / `fsComposite` |
+| 13-tap 降采样、9-tap tent 升采样 | 同文件 `downsample13()` / `upsampleTent()` |
+| 参数打包 | `viz/src/vk_post.cpp` `writeUbo()`：`f[0]=strength, f[1]=exposure, f[2]=threshold` |
+| 阈值与 clamp 的 push constant | 同文件 `renderBloom()` 开头的 `BloomPC` |
+| 5 级 mip 尺寸（半分辨率起逐级减半） | 同文件 `createTargets()` |
+| pass 顺序与 image barrier | 同文件 `renderBloom()` |
+| 两个滑杆的取值域 | `viz/src/viz_main.cpp`：强度 `v*2.0`（0–2.0）、阈值 `0.5 + v*7.5`（0.5–8.0） |
+| 默认值 | `viz/src/vk_post.h` 的 `Params`（0.55 / 1.0 / 2.5）与 `bloomClamp = 6.0` |
+| 统计/作图脚本 | `tools/bloom_sources.py`、`tools/bloom_probe.py`、`tools/make_bloom_fig.py` |
 
 ---
 
