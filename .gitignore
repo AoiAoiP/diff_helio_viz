@@ -22,3 +22,8 @@ viz/shaders/*.spv
 !docs/assets/*.gif
 !docs/figs/*.png
 !docs/figs/*.gif
+
+
+PLAN.md
+PROMPT.md
+NOTES_provenance.md
